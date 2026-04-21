@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+tensorflow
+numpy
+pillow
+motor
+python-multipart
+pydantic
+python-dotenv
+scikit-learn
+matplotlib
