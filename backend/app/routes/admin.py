@@ -12,11 +12,40 @@ from ..ai.train import train_model
 
 router = APIRouter(prefix="/api", tags=["Admin"])
 
+from dotenv import load_dotenv
+
+# Load/reload environment variables
+load_dotenv(override=True)
+
 # Environment configurations
 MODEL_DIR = os.getenv("MODEL_DIR", "models")
 MODEL_PATH = os.getenv("MODEL_PATH", "models/blood_group_model.pth")
-DATASET_DIR = os.getenv("DATASET_DIR", os.getenv("DATASET_PATH", "../dataset_blood_group"))
 STATUS_FILE = os.path.join(MODEL_DIR, "training_status.json")
+
+# Resolve dataset path dynamically
+raw_dataset_path = os.getenv("DATASET_PATH", "dataset_blood_group")
+if not os.path.isabs(raw_dataset_path):
+    # Search multiple depths relative to this file's position (backend/app/routes/admin.py)
+    current_file_dir = os.path.dirname(os.path.abspath(__file__))
+    possible_paths = [
+        # Check workspace root: /Users/dhina/Desktop/bio ai/dataset_blood_group (3 levels up)
+        os.path.abspath(os.path.join(current_file_dir, "../../..", raw_dataset_path)),
+        # Check project root: /Users/dhina/Desktop/bio ai/biovision-ai/dataset_blood_group (2 levels up)
+        os.path.abspath(os.path.join(current_file_dir, "../..", raw_dataset_path)),
+        # Check backend root (1 level up)
+        os.path.abspath(os.path.join(current_file_dir, "..", raw_dataset_path)),
+        os.path.abspath(raw_dataset_path)
+    ]
+    DATASET_DIR = possible_paths[0]  # default fallback
+    for p in possible_paths:
+        # Check if the folder contains classes
+        if os.path.isdir(p):
+            has_class_dirs = any(os.path.isdir(os.path.join(p, c)) for c in ["A+", "B+", "O+"])
+            if has_class_dirs:
+                DATASET_DIR = p
+                break
+else:
+    DATASET_DIR = raw_dataset_path
 
 # Ensure models directory exists
 os.makedirs(MODEL_DIR, exist_ok=True)

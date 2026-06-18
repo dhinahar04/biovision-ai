@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from .database import engine, Base
 from .routes import predictions, admin
 
-# Perform automatic database migration/creation
+# Perform automatic database migration/creation (Reloaded configuration)
 try:
     Base.metadata.create_all(bind=engine)
     print("Database tables initialized successfully.")
