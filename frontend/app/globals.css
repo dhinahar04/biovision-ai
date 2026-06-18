@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  font-size: 17.5px; /* Increase baseline font sizes globally by ~9% */
+}
+
+body {
+  background-color: #050505;
+  color: #f3f4f6;
+  font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Space Grotesk', sans-serif;
+  letter-spacing: -0.02em;
+  font-weight: 800; /* Ensure prominent, attractive bold headings */
+}
+
+/* Cyber grid background layer in toxic green */
+.cyber-grid {
+  background-size: 50px 50px;
+  background-image: 
+    linear-gradient(to right, rgba(204, 255, 0, 0.015) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(204, 255, 0, 0.015) 1px, transparent 1px);
+}
+
+/* Glassmorphism panel styling (Green-tinted dark transparent) */
+.glass-panel {
+  background: rgba(10, 15, 10, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(204, 255, 0, 0.12);
+}
+
+.glass-panel-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-panel-hover:hover {
+  background: rgba(10, 15, 10, 0.85);
+  border-color: rgba(204, 255, 0, 0.35);
+  box-shadow: 0 0 25px rgba(204, 255, 0, 0.18);
+}
+
+/* Custom Scrollbar for premium dark feel */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #050505;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1f2a15;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #364d23;
+}
+
+/* Scanner Animation Effect in holographic gradients */
+@keyframes scan {
+  0% {
+    top: 0%;
+    opacity: 0.8;
+  }
+  50% {
+    top: 100%;
+    opacity: 1;
+  }
+  100% {
+    top: 0%;
+    opacity: 0.8;
+  }
+}
+
+.animate-scanner {
+  position: relative;
+}
+
+.animate-scanner::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #ccff00, #ff0055, #ccff00, transparent);
+  box-shadow: 0 0 12px #ccff00, 0 0 4px #ff0055;
+  animation: scan 4s ease-in-out infinite;
+  z-index: 10;
+}
+
+/* Background gradient nodes - Toxic Volt and Digital Ice-Teal highlights */
+.bg-glow-cyan {
+  background: radial-gradient(circle, rgba(204, 255, 0, 0.11) 0%, transparent 70%);
+}
+
+.bg-glow-purple {
+  background: radial-gradient(circle, rgba(0, 245, 255, 0.07) 0%, transparent 70%);
+}
