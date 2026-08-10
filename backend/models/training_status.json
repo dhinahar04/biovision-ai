@@ -1,0 +1,26 @@
+{
+    "status": "training",
+    "current_epoch": 2,
+    "total_epochs": 5,
+    "train_loss": 1.0594,
+    "train_acc": 57.05,
+    "val_loss": 0.8486,
+    "val_acc": 68.44,
+    "message": "Epoch 2/5 completed. Train Acc: 57.05%, Val Acc: 68.44%",
+    "history": [
+        {
+            "epoch": 1,
+            "train_loss": 1.6028,
+            "train_acc": 39.16,
+            "val_loss": 1.1305,
+            "val_acc": 53.41
+        },
+        {
+            "epoch": 2,
+            "train_loss": 1.0594,
+            "train_acc": 57.05,
+            "val_loss": 0.8486,
+            "val_acc": 68.44
+        }
+    ]
+}

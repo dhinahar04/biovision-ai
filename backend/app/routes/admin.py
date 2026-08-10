@@ -156,7 +156,7 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
 def get_training_status():
     return get_status()
 
-def background_train_task(dataset_path: str, output_model_dir: str):
+def background_train_task(dataset_path: str, output_model_dir: str, architecture: str = "efficientnet_b0"):
     """Executes PyTorch model training and updates the status file dynamically."""
     current_status = {
         "status": "training",
@@ -196,6 +196,7 @@ def background_train_task(dataset_path: str, output_model_dir: str):
             dataset_path=dataset_path,
             output_model_dir=output_model_dir,
             epochs=5,
+            architecture=architecture,
             progress_callback=progress_callback
         )
         
@@ -208,7 +209,10 @@ def background_train_task(dataset_path: str, output_model_dir: str):
         save_status(current_status)
 
 @router.post("/train")
-def trigger_model_training(background_tasks: BackgroundTasks):
+def trigger_model_training(
+    background_tasks: BackgroundTasks,
+    architecture: str = "efficientnet_b0"
+):
     current_status = get_status()
     if current_status["status"] == "training":
         raise HTTPException(status_code=400, detail="Training is already in progress.")
@@ -233,7 +237,7 @@ def trigger_model_training(background_tasks: BackgroundTasks):
         )
 
     # Launch non-blocking background task
-    background_tasks.add_task(background_train_task, abs_dataset_dir, os.path.abspath(MODEL_DIR))
+    background_tasks.add_task(background_train_task, abs_dataset_dir, os.path.abspath(MODEL_DIR), architecture)
     
     return {"message": "Background training process initialized."}
 

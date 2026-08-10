@@ -8,19 +8,21 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        background: "#050505", // deep obsidian black
-        cardBg: "rgba(10, 15, 10, 0.7)", // green-tinted glass
-        neonCyan: "#ccff00", // Toxic Volt (DNA/Biohazard)
-        neonGreen: "#ff0055", // Bio-Pulse Crimson (Blood)
-        cyberPurple: "#00f5ff", // Digital Ice-Teal
+        background: "#F8FAFC", // soft slate white
+        cardBg: "#FFFFFF", // solid pure white cards
+        neonCyan: "#2563EB", // Cobalt blue (Medical primary)
+        neonGreen: "#0D9488", // Teal/emerald (Active)
+        cyberPurple: "#7C3AED", // Neural purple (Explainability)
+        bloodRed: "#E11D48", // Clinical crimson (Disclaimers)
       },
       boxShadow: {
-        glowCyan: "0 0 15px rgba(204, 255, 0, 0.5)",
-        glowGreen: "0 0 15px rgba(255, 0, 85, 0.5)",
+        glowCyan: "0 10px 25px -5px rgba(37, 99, 235, 0.08), 0 8px 10px -6px rgba(37, 99, 235, 0.08)",
+        glowGreen: "0 10px 25px -5px rgba(13, 148, 136, 0.08), 0 8px 10px -6px rgba(13, 148, 136, 0.08)",
+        glowPurple: "0 10px 25px -5px rgba(124, 58, 237, 0.08), 0 8px 10px -6px rgba(124, 58, 237, 0.08)",
       },
       fontFamily: {
         sans: ["'Plus Jakarta Sans'", "sans-serif"],
-        display: ["'Space Grotesk'", "sans-serif"],
+        display: ["'Outfit'", "sans-serif"],
       },
     },
   },

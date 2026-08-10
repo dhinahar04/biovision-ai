@@ -1,6 +1,7 @@
 import os
 import uuid
 from datetime import datetime
+from typing import List
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Form
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
@@ -8,7 +9,7 @@ import cv2
 import json
 
 from ..database import get_db
-from ..models import Prediction, Feedback
+from ..models import Prediction, Feedback, PredictionFinger
 from ..ai.predict import predict_blood_group
 
 router = APIRouter(prefix="/api", tags=["Predictions"])
@@ -23,57 +24,123 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @router.post("/upload")
 async def upload_fingerprint(
-    file: UploadFile = File(...),
+    files: List[UploadFile] = File(...),
     db: Session = Depends(get_db)
 ):
-    # Validate file type
-    if not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="Only image files are accepted")
+    # Validate files count
+    if not files:
+        raise HTTPException(status_code=400, detail="No files uploaded")
 
-    file_bytes = await file.read()
-    
-    # Run prediction & OpenCV enhancements
-    try:
-        results = predict_blood_group(file_bytes, MODEL_PATH, CLASSES_PATH)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Image processing failed: {str(e)}")
+    for f in files:
+        if not f.content_type.startswith("image/"):
+            raise HTTPException(status_code=400, detail=f"File {f.filename} is not an image")
 
-    # Generate unique filenames
-    unique_id = uuid.uuid4().hex
-    orig_name = f"original_{unique_id}.png"
-    enhanced_name = f"enhanced_{unique_id}.png"
-    gradcam_name = f"gradcam_{unique_id}.png"
+    all_finger_results = []
+    classes = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]
 
-    orig_path = os.path.join(UPLOAD_DIR, orig_name)
-    enhanced_path = os.path.join(UPLOAD_DIR, enhanced_name)
-    gradcam_path = os.path.join(UPLOAD_DIR, gradcam_name)
+    # We will process each file
+    for index, file in enumerate(files):
+        file_bytes = await file.read()
+        
+        # Run prediction & OpenCV enhancements
+        try:
+            results = predict_blood_group(file_bytes, MODEL_PATH, CLASSES_PATH)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Image processing failed for {file.filename}: {str(e)}")
 
-    # Save original image to file system
-    with open(orig_path, "wb") as f:
-        f.write(file_bytes)
+        # Generate unique filenames
+        unique_id = uuid.uuid4().hex
+        orig_name = f"original_{unique_id}.png"
+        enhanced_name = f"enhanced_{unique_id}.png"
+        gradcam_name = f"gradcam_{unique_id}.png"
 
-    # Save enhanced grayscale and Grad-CAM color overlay
-    cv2.imwrite(enhanced_path, results["enhanced_image"])
-    
-    if results["gradcam_image"] is not None:
-        cv2.imwrite(gradcam_path, results["gradcam_image"])
+        orig_path = os.path.join(UPLOAD_DIR, orig_name)
+        enhanced_path = os.path.join(UPLOAD_DIR, enhanced_name)
+        gradcam_path = os.path.join(UPLOAD_DIR, gradcam_name)
+
+        # Save original image to file system
+        with open(orig_path, "wb") as f_out:
+            f_out.write(file_bytes)
+
+        # Save enhanced grayscale and Grad-CAM color overlay
+        cv2.imwrite(enhanced_path, results["enhanced_image"])
+        if results["gradcam_image"] is not None:
+            cv2.imwrite(gradcam_path, results["gradcam_image"])
+        else:
+            cv2.imwrite(gradcam_path, results["enhanced_image"])
+
+        all_finger_results.append({
+            "image_path": orig_path,
+            "enhanced_path": enhanced_path,
+            "gradcam_path": gradcam_path,
+            "predicted_blood_group": results["predicted_blood_group"],
+            "confidence": results["confidence"],
+            "probabilities": results["probabilities"],
+            "pattern_type": results["pattern_type"],
+            "quality_score": results["quality_score"],
+            "simulation": results["simulation"]
+        })
+
+    # Aggregate predictions across all fingers
+    # 1. Average probabilities
+    avg_probabilities = {cls: 0.0 for cls in classes}
+    for finger in all_finger_results:
+        probs = finger["probabilities"]
+        for cls in classes:
+            avg_probabilities[cls] += probs.get(cls, 0.0)
+
+    for cls in classes:
+        avg_probabilities[cls] = round(avg_probabilities[cls] / len(all_finger_results), 2)
+
+    # 2. Determine final prediction based on highest average probability
+    predicted_blood_group = max(avg_probabilities, key=avg_probabilities.get)
+    confidence = avg_probabilities[predicted_blood_group]
+
+    # 3. Average quality score
+    avg_quality = round(sum(f["quality_score"] for f in all_finger_results) / len(all_finger_results), 2)
+
+    # 4. Pattern types (e.g. show combined patterns or majority)
+    pattern_types = [f["pattern_type"] for f in all_finger_results if f["pattern_type"]]
+    if pattern_types:
+        unique_patterns = list(set(pattern_types))
+        pattern_type = " & ".join(unique_patterns) if len(unique_patterns) > 1 else unique_patterns[0]
     else:
-        # Fallback to enhanced grayscale image if Grad-CAM fails
-        cv2.imwrite(gradcam_path, results["enhanced_image"])
+        pattern_type = "Unknown"
 
-    # Create Database record
+    # Use first finger's paths for back-compatibility
+    first_finger = all_finger_results[0]
+    simulation_active = any(f["simulation"] for f in all_finger_results)
+
+    # Create parent Prediction Database record
     prediction = Prediction(
-        image_path=orig_path,
-        enhanced_path=enhanced_path,
-        gradcam_path=gradcam_path,
-        predicted_blood_group=results["predicted_blood_group"],
-        confidence=results["confidence"],
-        probabilities=results["probabilities"],
-        pattern_type=results["pattern_type"],
-        quality_score=results["quality_score"]
+        image_path=first_finger["image_path"],
+        enhanced_path=first_finger["enhanced_path"],
+        gradcam_path=first_finger["gradcam_path"],
+        predicted_blood_group=predicted_blood_group,
+        confidence=confidence,
+        probabilities=avg_probabilities,
+        pattern_type=pattern_type,
+        quality_score=avg_quality
     )
-    
     db.add(prediction)
+    db.commit()
+    db.refresh(prediction)
+
+    # Create child PredictionFinger records
+    for f_res in all_finger_results:
+        finger_rec = PredictionFinger(
+            prediction_id=prediction.id,
+            image_path=f_res["image_path"],
+            enhanced_path=f_res["enhanced_path"],
+            gradcam_path=f_res["gradcam_path"],
+            predicted_blood_group=f_res["predicted_blood_group"],
+            confidence=f_res["confidence"],
+            probabilities=f_res["probabilities"],
+            pattern_type=f_res["pattern_type"],
+            quality_score=f_res["quality_score"]
+        )
+        db.add(finger_rec)
+    
     db.commit()
     db.refresh(prediction)
 
@@ -84,11 +151,11 @@ async def upload_fingerprint(
         "probabilities": prediction.probabilities,
         "pattern_type": prediction.pattern_type,
         "quality_score": prediction.quality_score,
-        "original_url": f"/api/static/{orig_name}",
-        "enhanced_url": f"/api/static/{enhanced_name}",
-        "gradcam_url": f"/api/static/{gradcam_name}",
+        "original_url": f"/api/static/{os.path.basename(prediction.image_path)}",
+        "enhanced_url": f"/api/static/{os.path.basename(prediction.enhanced_path)}",
+        "gradcam_url": f"/api/static/{os.path.basename(prediction.gradcam_path)}",
         "created_at": prediction.created_at.isoformat(),
-        "simulation": results["simulation"]
+        "simulation": simulation_active
     }
 
 @router.get("/history")
@@ -136,7 +203,21 @@ def get_prediction_detail(prediction_id: int, db: Session = Depends(get_db)):
         "enhanced_url": f"/api/static/{os.path.basename(p.enhanced_path)}",
         "gradcam_url": f"/api/static/{os.path.basename(p.gradcam_path)}",
         "actual_blood_group": actual,
-        "created_at": p.created_at.isoformat()
+        "created_at": p.created_at.isoformat(),
+        "fingers": [
+            {
+                "id": f.id,
+                "predicted_blood_group": f.predicted_blood_group,
+                "confidence": f.confidence,
+                "probabilities": f.probabilities,
+                "pattern_type": f.pattern_type,
+                "quality_score": f.quality_score,
+                "original_url": f"/api/static/{os.path.basename(f.image_path)}" if f.image_path else None,
+                "enhanced_url": f"/api/static/{os.path.basename(f.enhanced_path)}" if f.enhanced_path else None,
+                "gradcam_url": f"/api/static/{os.path.basename(f.gradcam_path)}" if f.gradcam_path else None,
+            }
+            for f in p.fingers
+        ]
     }
 
 @router.post("/feedback")

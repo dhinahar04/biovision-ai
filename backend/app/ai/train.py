@@ -98,9 +98,9 @@ def load_dataset(dataset_path):
 
     return file_paths, labels, class_to_idx
 
-def train_model(dataset_path: str, output_model_dir: str, epochs: int = 5, batch_size: int = 32, lr: float = 1e-4, progress_callback=None):
+def train_model(dataset_path: str, output_model_dir: str, epochs: int = 5, batch_size: int = 32, lr: float = 1e-4, architecture: str = "efficientnet_b0", progress_callback=None):
     """
-    Standard transfer learning pipeline with EfficientNet-B0
+    Standard transfer learning pipeline supporting multiple models
     """
     # 1. Scan and split dataset
     file_paths, labels, class_to_idx = load_dataset(dataset_path)
@@ -119,7 +119,9 @@ def train_model(dataset_path: str, output_model_dir: str, epochs: int = 5, batch
     train_transform = transforms.Compose([
         transforms.RandomRotation(15),
         transforms.RandomHorizontalFlip(),
-        transforms.RandomAffine(degrees=0, translate=(0.05, 0.05)),
+        transforms.RandomAffine(degrees=15, translate=(0.05, 0.05), scale=(0.8, 1.2)),
+        transforms.ColorJitter(brightness=0.3, contrast=0.3),
+        transforms.GaussianBlur(kernel_size=(5, 5), sigma=(0.1, 1.5)),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
@@ -137,16 +139,32 @@ def train_model(dataset_path: str, output_model_dir: str, epochs: int = 5, batch
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
 
     # 4. Initialize model
-    print(f"Loading pretrained EfficientNet-B0 model on device: {device}...")
-    try:
-        from torchvision.models import efficientnet_b0, EfficientNet_B0_Weights
-        model = efficientnet_b0(weights=EfficientNet_B0_Weights.DEFAULT)
-    except ImportError:
-        model = models.efficientnet_b0(pretrained=True)
+    print(f"Loading pretrained {architecture} model on device: {device}...")
+    if architecture == "mobilenet_v2":
+        try:
+            from torchvision.models import mobilenet_v2, MobileNet_V2_Weights
+            model = mobilenet_v2(weights=MobileNet_V2_Weights.DEFAULT)
+        except ImportError:
+            model = models.mobilenet_v2(pretrained=True)
+        in_features = model.classifier[1].in_features
+        model.classifier[1] = nn.Linear(in_features, len(class_to_idx))
+    elif architecture == "resnet50":
+        try:
+            from torchvision.models import resnet50, ResNet50_Weights
+            model = resnet50(weights=ResNet50_Weights.DEFAULT)
+        except ImportError:
+            model = models.resnet50(pretrained=True)
+        in_features = model.fc.in_features
+        model.fc = nn.Linear(in_features, len(class_to_idx))
+    else: # efficientnet_b0
+        try:
+            from torchvision.models import efficientnet_b0, EfficientNet_B0_Weights
+            model = efficientnet_b0(weights=EfficientNet_B0_Weights.DEFAULT)
+        except ImportError:
+            model = models.efficientnet_b0(pretrained=True)
+        in_features = model.classifier[1].in_features
+        model.classifier[1] = nn.Linear(in_features, len(class_to_idx))
 
-    # Replace final linear layer (EfficientNet-B0 classifier has Dropout and Linear)
-    in_features = model.classifier[1].in_features
-    model.classifier[1] = nn.Linear(in_features, len(class_to_idx))
     model = model.to(device)
 
     # 5. Optimizer and loss
@@ -227,8 +245,12 @@ def train_model(dataset_path: str, output_model_dir: str, epochs: int = 5, batch
             torch.save(model.state_dict(), os.path.join(output_model_dir, "blood_group_model.pth"))
 
     # Save classes.json
+    classes_meta = {
+        "classes": idx_to_class,
+        "architecture": architecture
+    }
     with open(os.path.join(output_model_dir, "classes.json"), "w") as f:
-        json.dump(idx_to_class, f, indent=4)
+        json.dump(classes_meta, f, indent=4)
 
     # Save history log
     with open(os.path.join(output_model_dir, "training_history.json"), "w") as f:

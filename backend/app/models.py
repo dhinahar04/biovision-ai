@@ -19,6 +19,24 @@ class Prediction(Base):
 
     # Relationship to feedback
     feedbacks = relationship("Feedback", back_populates="prediction", cascade="all, delete-orphan")
+    fingers = relationship("PredictionFinger", back_populates="prediction", cascade="all, delete-orphan")
+
+class PredictionFinger(Base):
+    __tablename__ = "prediction_fingers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    prediction_id = Column(Integer, ForeignKey("predictions.id", ondelete="CASCADE"), nullable=False)
+    image_path = Column(String, nullable=False)
+    enhanced_path = Column(String, nullable=True)
+    gradcam_path = Column(String, nullable=True)
+    predicted_blood_group = Column(String, nullable=False)
+    confidence = Column(Float, nullable=False)
+    probabilities = Column(JSON, nullable=True)
+    pattern_type = Column(String, nullable=True)
+    quality_score = Column(Float, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    prediction = relationship("Prediction", back_populates="fingers")
 
 class Feedback(Base):
     __tablename__ = "feedback"

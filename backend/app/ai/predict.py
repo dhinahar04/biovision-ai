@@ -17,19 +17,37 @@ from app.ai.preprocess import enhance_fingerprint, calculate_quality_score, clas
 # Set device
 device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 
-def get_efficientnet_model(num_classes=8):
+def get_model(architecture="efficientnet_b0", num_classes=8):
     """
-    Builds EfficientNet-B0 model architecture matching the train script.
+    Builds model architecture matching the trained architecture.
     """
-    try:
-        from torchvision.models import efficientnet_b0, EfficientNet_B0_Weights
-        model = efficientnet_b0(weights=None)
-    except ImportError:
-        model = models.efficientnet_b0(pretrained=False)
-    
-    in_features = model.classifier[1].in_features
-    model.classifier[1] = nn.Linear(in_features, num_classes)
-    return model
+    if architecture == "mobilenet_v2":
+        try:
+            from torchvision.models import mobilenet_v2, MobileNet_V2_Weights
+            model = mobilenet_v2(weights=None)
+        except ImportError:
+            model = models.mobilenet_v2(pretrained=False)
+        in_features = model.classifier[1].in_features
+        model.classifier[1] = nn.Linear(in_features, num_classes)
+        return model
+    elif architecture == "resnet50":
+        try:
+            from torchvision.models import resnet50, ResNet50_Weights
+            model = resnet50(weights=None)
+        except ImportError:
+            model = models.resnet50(pretrained=False)
+        in_features = model.fc.in_features
+        model.fc = nn.Linear(in_features, num_classes)
+        return model
+    else: # efficientnet_b0
+        try:
+            from torchvision.models import efficientnet_b0, EfficientNet_B0_Weights
+            model = efficientnet_b0(weights=None)
+        except ImportError:
+            model = models.efficientnet_b0(pretrained=False)
+        in_features = model.classifier[1].in_features
+        model.classifier[1] = nn.Linear(in_features, num_classes)
+        return model
 
 def generate_mock_gradcam(enhanced_gray: np.ndarray) -> np.ndarray:
     """
@@ -81,9 +99,17 @@ def predict_blood_group(image_bytes: bytes, model_path: str, classes_path: str) 
     gradcam_image = None
 
     # Try loading model
+    architecture = "efficientnet_b0"
     if os.path.exists(model_path):
         try:
-            model = get_efficientnet_model(num_classes=8)
+            # First, read architecture from classes_path if available
+            if os.path.exists(classes_path):
+                with open(classes_path, "r") as f:
+                    meta = json.load(f)
+                if isinstance(meta, dict) and "classes" in meta:
+                    architecture = meta.get("architecture", "efficientnet_b0")
+
+            model = get_model(architecture=architecture, num_classes=8)
             model.load_state_dict(torch.load(model_path, map_location=device))
             model.to(device)
             model.eval()
@@ -114,12 +140,13 @@ def predict_blood_group(image_bytes: bytes, model_path: str, classes_path: str) 
             def hook_gradient(module, grad_input, grad_output):
                 gradients.append(grad_output[0].data.cpu().numpy())
 
-            # Register hook on the last conv layer of EfficientNet-B0
-            # torchvision efficientnet_b0 structure:
-            # model.features: Sequential
-            # Last block in features is features[8] or features[-1], which is Conv2dNormActivation
-            # Inside Conv2dNormActivation: 0 is Conv2d
-            target_layer = model.features[-1][0]
+            # Register hook on the last conv layer based on architecture
+            if architecture == "resnet50":
+                target_layer = model.layer4[-1].conv3
+            elif architecture == "mobilenet_v2":
+                target_layer = model.features[-1][0]
+            else: # efficientnet_b0
+                target_layer = model.features[-1][0]
             
             handle_forward = target_layer.register_forward_hook(hook_feature)
             handle_backward = target_layer.register_backward_hook(hook_gradient)
@@ -143,9 +170,13 @@ def predict_blood_group(image_bytes: bytes, model_path: str, classes_path: str) 
             # Retrieve class mapping
             if os.path.exists(classes_path):
                 with open(classes_path, "r") as f:
-                    cls_mapping = json.load(f)
-                    # Convert to list ordered by index
-                    classes_list = [cls_mapping[str(i)] for i in range(8)]
+                    meta = json.load(f)
+                if isinstance(meta, dict) and "classes" in meta:
+                    cls_mapping = meta["classes"]
+                else:
+                    cls_mapping = meta
+                # Convert to list ordered by index
+                classes_list = [cls_mapping[str(i)] for i in range(8)]
             else:
                 classes_list = classes
 

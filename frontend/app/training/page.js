@@ -25,6 +25,7 @@ export default function TrainingPage() {
 
   const [loading, setLoading] = useState(true);
   const [triggering, setTriggering] = useState(false);
+  const [architecture, setArchitecture] = useState("efficientnet_b0");
 
   // Poll status when active
   useEffect(() => {
@@ -53,7 +54,7 @@ export default function TrainingPage() {
   const triggerTraining = async () => {
     setTriggering(true);
     try {
-      const res = await fetch("http://localhost:8000/api/train", {
+      const res = await fetch(`http://localhost:8000/api/train?architecture=${architecture}`, {
         method: "POST"
       });
       if (!res.ok) throw new Error("Could not start background training");
@@ -95,7 +96,7 @@ export default function TrainingPage() {
         <h1 className="text-3xl font-extrabold tracking-tight mt-1 flex items-center gap-3">
           <Cpu className="w-8 h-8 text-neonCyan" /> CNN Model Training
         </h1>
-        <p className="text-sm text-gray-400">Fine-tune the pre-trained EfficientNet-B0 classifier on local folders. Operates as a non-blocking background thread.</p>
+        <p className="text-sm text-gray-400">Fine-tune pre-trained models on local folders. Operates as a non-blocking background thread.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -108,7 +109,7 @@ export default function TrainingPage() {
             <h3 className="font-bold text-lg text-white">Model Status Control</h3>
             
             {/* Display State Badge */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between border-b border-gray-900/60 pb-3">
               <span className="text-xs text-gray-400 font-mono">Current State:</span>
               <span className={`px-2.5 py-1 rounded text-xs font-bold font-mono uppercase tracking-wider ${
                 status.status === "training" 
@@ -121,6 +122,21 @@ export default function TrainingPage() {
               }`}>
                 {status.status}
               </span>
+            </div>
+
+            {/* Architecture Selector */}
+            <div className="flex flex-col gap-1.5 text-left">
+              <span className="text-[10px] text-gray-500 font-mono tracking-wider">SELECT CNN ARCHITECTURE:</span>
+              <select
+                value={architecture}
+                onChange={(e) => setArchitecture(e.target.value)}
+                disabled={status.status === "training" || triggering}
+                className="bg-gray-950 border border-gray-800 text-xs rounded-lg p-2.5 focus:border-neonCyan outline-none text-white font-medium disabled:opacity-50"
+              >
+                <option value="efficientnet_b0">EfficientNet-B0 (Highly Accurate, Default)</option>
+                <option value="mobilenet_v2">MobileNet-V2 (Lightweight, Faster Training)</option>
+                <option value="resnet50">ResNet-50 (Strong Feature Extractor)</option>
+              </select>
             </div>
 
             {/* Main Trigger Button */}
@@ -182,7 +198,7 @@ export default function TrainingPage() {
               <ShieldCheck className="w-5 h-5 text-neonGreen shrink-0 mt-0.5" />
               <div className="text-xs leading-relaxed text-gray-400">
                 <span className="font-bold text-white block">Trained Weights Activated</span>
-                EfficientNet-B0 has been calibrated with the latest dataset. Classification accuracies, quality score thresholds, and Grad-CAM activations are updated.
+                The selected architecture weights have been saved and registered. Classification accuracies, quality score thresholds, and Grad-CAM activations are updated.
               </div>
             </div>
           )}

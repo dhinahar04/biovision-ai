@@ -40,13 +40,17 @@ def enhance_fingerprint(image_bytes: bytes):
         # Ensure crop isn't too small; fallback to original if tiny
         min_size = 30
         if w > min_size and h > min_size:
-            cropped_enhanced = enhanced[y:y+h, x:x+w]
+            cropped_enhanced = enhanced[y:y+h, x:x+w].copy()
             cropped_binary = binary[y:y+h, x:x+w]
+            # Remove background: set background pixels (0 in binary) to 255 (white) in enhanced
+            cropped_enhanced[cropped_binary == 0] = 255
         else:
-            cropped_enhanced = enhanced
+            cropped_enhanced = enhanced.copy()
+            cropped_enhanced[binary == 0] = 255
             cropped_binary = binary
     else:
-        cropped_enhanced = enhanced
+        cropped_enhanced = enhanced.copy()
+        cropped_enhanced[binary == 0] = 255
         cropped_binary = binary
 
     # 6. Resize to standard AI input dimensions (224x224)
