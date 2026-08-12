@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { UploadCloud, FileImage, ShieldAlert, ArrowRight, RefreshCw, Fingerprint, Trash2, CheckCircle2, Circle } from "lucide-react";
+import { API_BASE_URL } from "@/lib/api";
 
 export default function UploadPage() {
   const router = useRouter();
@@ -112,7 +113,7 @@ export default function UploadPage() {
     });
 
     try {
-      const response = await fetch("http://localhost:8000/api/upload", {
+      const response = await fetch(`${API_BASE_URL}/api/upload`, {
         method: "POST",
         body: formData,
       });
@@ -128,7 +129,7 @@ export default function UploadPage() {
     } catch (error) {
       clearInterval(stepInterval);
       setIsUploading(false);
-      alert("Scan failed. Ensure the FastAPI backend server is running on localhost:8000.");
+      alert("Scan failed. Please check that the backend server is running and accessible.");
     }
   };
 

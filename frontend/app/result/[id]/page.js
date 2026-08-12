@@ -10,6 +10,7 @@ import {
   Fingerprint, Award, Layers, ShieldAlert, Download, CheckCircle, 
   HelpCircle, AlertCircle, HeartPulse, RefreshCw
 } from "lucide-react";
+import { API_BASE_URL } from "@/lib/api";
 
 export default function ResultPage() {
   const { id } = useParams();
@@ -37,7 +38,7 @@ export default function ResultPage() {
   const fetchPredictionDetails = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`http://localhost:8000/api/prediction/${id}`);
+      const res = await fetch(`${API_BASE_URL}/api/prediction/${id}`);
       if (!res.ok) throw new Error("Failed to fetch prediction details");
       const data = await res.json();
       setPrediction(data);
@@ -61,7 +62,7 @@ export default function ResultPage() {
       formData.append("prediction_id", id);
       formData.append("actual_blood_group", actualGroup);
 
-      const res = await fetch("http://localhost:8000/api/feedback", {
+      const res = await fetch(`${API_BASE_URL}/api/feedback`, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: formData.toString()
@@ -128,9 +129,9 @@ export default function ResultPage() {
   // Determine active visual data
   const visualSource = activeFinger || prediction;
   const activeImageUrl = () => {
-    if (activeTab === "original") return `http://localhost:8000${visualSource.original_url}`;
-    if (activeTab === "enhanced") return `http://localhost:8000${visualSource.enhanced_url}`;
-    return `http://localhost:8000${visualSource.gradcam_url}`;
+    if (activeTab === "original") return `${API_BASE_URL}${visualSource.original_url}`;
+    if (activeTab === "enhanced") return `${API_BASE_URL}${visualSource.enhanced_url}`;
+    return `${API_BASE_URL}${visualSource.gradcam_url}`;
   };
 
   return (
@@ -145,7 +146,7 @@ export default function ResultPage() {
 
         <div className="flex items-center gap-3">
           <a
-            href={`http://localhost:8000/api/report/${prediction.id}`}
+            href={`${API_BASE_URL}/api/report/${prediction.id}`}
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-2 px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm hover:shadow-md transition-all font-mono"

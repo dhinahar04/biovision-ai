@@ -7,6 +7,7 @@ import {
   History, Calendar, Award, Layers, CheckCircle2, ArrowUpRight, 
   HelpCircle, RefreshCw, AlertCircle
 } from "lucide-react";
+import { API_BASE_URL } from "@/lib/api";
 
 export default function HistoryPage() {
   const [history, setHistory] = useState([]);
@@ -20,7 +21,7 @@ export default function HistoryPage() {
   const fetchHistory = async () => {
     try {
       setLoading(true);
-      const res = await fetch("http://localhost:8000/api/history");
+      const res = await fetch(`${API_BASE_URL}/api/history`);
       if (!res.ok) throw new Error("Failed to fetch history log");
       const data = await res.json();
       setHistory(data);
@@ -106,7 +107,7 @@ export default function HistoryPage() {
               {/* Thumbnail Display */}
               <div className="relative w-28 h-28 border border-slate-100 rounded-xl overflow-hidden shrink-0 bg-slate-50 flex items-center justify-center shadow-inner">
                 <img 
-                  src={`http://localhost:8000${item.gradcam_url}`} 
+                  src={`${API_BASE_URL}${item.gradcam_url}`} 
                   alt="Grad-CAM activation thumbnail"
                   className="max-h-full max-w-full object-contain"
                 />

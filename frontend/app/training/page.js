@@ -9,6 +9,7 @@ import {
   Cpu, RefreshCw, Play, CheckCircle2, AlertCircle, ArrowLeft, 
   Terminal, ShieldCheck
 } from "lucide-react";
+import { API_BASE_URL } from "@/lib/api";
 
 export default function TrainingPage() {
   const [status, setStatus] = useState({
@@ -40,7 +41,7 @@ export default function TrainingPage() {
 
   const fetchStatus = async () => {
     try {
-      const res = await fetch("http://localhost:8000/api/train/status");
+      const res = await fetch(`${API_BASE_URL}/api/train/status`);
       if (!res.ok) throw new Error("Failed to fetch training status");
       const data = await res.json();
       setStatus(data);
@@ -54,7 +55,7 @@ export default function TrainingPage() {
   const triggerTraining = async () => {
     setTriggering(true);
     try {
-      const res = await fetch(`http://localhost:8000/api/train?architecture=${architecture}`, {
+      const res = await fetch(`${API_BASE_URL}/api/train?architecture=${architecture}`, {
         method: "POST"
       });
       if (!res.ok) throw new Error("Could not start background training");

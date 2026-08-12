@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { FolderUp, UploadCloud, CheckCircle, Database, HelpCircle, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { API_BASE_URL } from "@/lib/api";
 
 export default function DatasetPage() {
   const router = useRouter();
@@ -31,7 +32,7 @@ export default function DatasetPage() {
     formData.append("file", selectedFile);
 
     try {
-      const res = await fetch("http://localhost:8000/api/dataset-upload", {
+      const res = await fetch(`${API_BASE_URL}/api/dataset-upload`, {
         method: "POST",
         body: formData
       });

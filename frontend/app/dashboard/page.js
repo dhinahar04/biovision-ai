@@ -10,6 +10,7 @@ import {
   BarChart3, Database, Users, CheckCircle, ShieldAlert, Cpu, 
   HelpCircle, RefreshCw, AlertTriangle
 } from "lucide-react";
+import { API_BASE_URL } from "@/lib/api";
 
 export default function DashboardPage() {
   const [stats, setStats] = useState(null);
@@ -23,7 +24,7 @@ export default function DashboardPage() {
   const fetchStats = async () => {
     try {
       setLoading(true);
-      const res = await fetch("http://localhost:8000/api/dashboard");
+      const res = await fetch(`${API_BASE_URL}/api/dashboard`);
       if (!res.ok) throw new Error("Failed to fetch dashboard stats");
       const data = await res.json();
       setStats(data);
